@@ -58,7 +58,7 @@ for i = 1:n_altitudes
         T_h0(i) = T0 - (L * 11000);  % Temperature at tropopause
     end
     
-    % Speed of sound: a = sqrt(γ·R·T)
+    % Speed of sound: a = sqrt(γ·R·T/M)
     a_h0(i) = sqrt((gamma_air * R_air * T_h0(i))/M0);  % [m/s]
     
     fprintf('   %5.1f      |     %6.2f      |       %6.2f         \n', ...
@@ -88,24 +88,19 @@ end
 %all values are correct till here. cross checked with https://www.engineeringtoolbox.com/elevation-speed-sound-air-d_1534.html
 %% Step 3: Calculate Specific Orbital Energy
 
-fprintf('SPECIFIC ORBITAL ENERGY\n');
 
-% Target orbit specific energy (circular orbit)
-% For circular orbit: v_circular = sqrt(μ/r)
-%v_target = sqrt(mu / r_target);  % Circular orbital velocity [km/s]
+
+%taking Specific energy of ground launch as reference.
 epsilon_ground = -mu /R_earth;  % Specific energy [km²/s²]
-
-%fprintf('  Orbital radius: r = %.0f km\n', r_target);
-%fprintf('  Circular velocity: v_circ = √(μ/r) = %.4f km/s = %.0f m/s\n', ...
- %       v_target, v_target*1000);
-%fprintf('  Specific energy: ε_target = v²/2 - μ/r = %.4f km²/s²\n\n', epsilon_target);
+fprintf('Reference Ground Launch Specific Energy (m^2/s^2) %d',epsilon_ground);
 
 % Initial specific energies for all cases
+%epsilon = V0^2 / 2 - mu / r0
 epsilon_target = zeros(n_mach, n_altitudes);
 
-
+fprintf('\n');
 fprintf('E0 Specific Energies:\n');
-fprintf('         | h₀ = 0 km  | h₀ = 7.5 km | h₀ = 15 km  | h₀ = 22.5 km\n');
+fprintf('         | h₀ = 0 km    | h₀ = 7.5 km   | h₀ = 15 km    | h₀ = 22.5 km\n');
 fprintf('----------------------------------------------------------------------\n');
 
 for i = 1:n_mach
@@ -120,7 +115,7 @@ for i = 1:n_mach
         % Specific energy: kinetic + potential
         epsilon_target(i,j) = V0^2 / 2 - mu / (r0);  % [m²/s²]
         
-        fprintf('  %8.4f   |', epsilon_target(i,j));
+        fprintf('  %8.4f    |', epsilon_target(i,j));
     end
     fprintf('\n');
 end
