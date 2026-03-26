@@ -34,7 +34,7 @@ n_altitudes = length(h0_values);
 n_mach = length(Mach_values);
 n_cases = n_altitudes * n_mach;
 
-%% Step 1: Calculate Atmospheric Properties and Speed of Sound
+%% Calculate Atmospheric Properties and Speed of Sound
 
 fprintf('ATMOSPHERIC PROPERTIES\n');
 
@@ -65,7 +65,7 @@ for i = 1:n_altitudes
             h, T_h0(i), a_h0(i));
 end
 
-%% Step 2: Calculate Initial Velocities
+%% Calculate Initial Velocities
 
 fprintf('INITIAL VELOCITIES (V₀ = M₀ × a)\n');
 
@@ -86,85 +86,118 @@ for i = 1:n_mach
     fprintf('\n');
 end
 %all values are correct till here. cross checked with https://www.engineeringtoolbox.com/elevation-speed-sound-air-d_1534.html
-%% Step 3: Calculate Specific Orbital Energy
+%% POTENTIAL ENERGY DIFFERENCES 
 
+% Reference: Ground launch potential energy
+PE_ground = -mu / R_earth;  % Potential energy at ground [m²/s²]
 
+fprintf('Reference Ground Launch Potential Energy: %.6f m²/s²\n\n', PE_ground);
 
-%taking Specific energy of ground launch as reference.
-epsilon_ground = -mu /R_earth;  % Specific energy [km²/s²]
-fprintf('Reference Ground Launch Specific Energy (m^2/s^2) %d',epsilon_ground);
+% Target orbit potential energy
+PE_target = -mu / r_target;  % Potential energy at target orbit [m²/s²]
 
-% Initial specific energies for all cases
-%epsilon = V0^2 / 2 - mu / r0
-epsilon_target = zeros(n_mach, n_altitudes);
+fprintf('Target Orbit Potential Energy: %.6f m²/s²\n\n', PE_target);
 
-fprintf('\n');
-fprintf('E0 Specific Energies:\n');
-fprintf('         | h₀ = 0 km    | h₀ = 7.5 km   | h₀ = 15 km    | h₀ = 22.5 km\n');
-fprintf('----------------------------------------------------------------------\n');
+% Potential energy at each initial altitude
+PE_initial = zeros(1, n_altitudes);
 
-for i = 1:n_mach
-    M = Mach_values(i);
-    fprintf('M₀ = %d   |', M);
-    
-    for j = 1:n_altitudes
-        h0 = h0_values(j);
-        r0 = R_earth + h0*1000;  % Initial radius [m]
-        V0 = V0_matrix(i,j);
-        
-        % Specific energy: kinetic + potential
-        epsilon_target(i,j) = V0^2 / 2 - mu / (r0);  % [m²/s²]
-        
-        fprintf('  %8.4f    |', epsilon_target(i,j));
-    end
-    fprintf('\n');
+fprintf('Potential Energy at Initial Altitudes:\n');
+fprintf('h₀ [km] |  r₀ [m]    | PE_initial [m²/s²]\n');
+fprintf('------------------------------------------------\n');
+
+for j = 1:n_altitudes
+    h0 = h0_values(j);
+    r0 = R_earth + h0*1000;  % Convert km to m
+    PE_initial(j) = -mu / r0;
+    fprintf(' %5.1f  | %10.0f | %15.6f\n', h0, r0, PE_initial(j));
 end
 
-%% Step 4: Energy Difference Required
-
-fprintf('ENERGY DIFFERENCE REQUIRED (Δε = ε_target - ε_initial)\n');
+%% TOTAL SPECIFIC ENERGY AND ΔV CALCULATION
 
 
-Delta_epsilon = zeros(n_mach, n_altitudes);
+% Target orbit energy (circular orbit)
+v_target_orbit = sqrt(mu / r_target);  % Circular velocity at target
+epsilon_target_orbit = v_target_orbit^2 / 2 - mu / r_target;  % Total specific energy
 
-fprintf('         | h₀ = 0 km  | h₀ = 7.5 km | h₀ = 15 km  | h₀ = 22.5 km\n');
-fprintf('----------------------------------------------------------------------\n');
+% Initial specific energies for each altitude (starting from rest, v₀=0)
+epsilon_initial = zeros(1, n_altitudes);
 
-for i = 1:n_mach
-    M = Mach_values(i);
-    fprintf('M₀ = %d   |', M);
-    
-    for j = 1:n_altitudes
-        Delta_epsilon(i,j) = epsilon_target(i,j) - epsilon_ground;  % [m²/s²]
-        fprintf('  %8.4f   |', Delta_epsilon(i,j));
-    end
-    fprintf('\n');
+fprintf('Initial Specific Energies (v₀=0 for altitude contribution):\n');
+fprintf('h₀ [km] |  r₀ [m]    | ε_initial [m²/s²]\n');
+fprintf('--------------------------------------------------\n');
+
+for j = 1:n_altitudes
+    h0 = h0_values(j);
+    r0 = R_earth + h0*1000;
+    % ε = v²/2 - μ/r, with v=0 for altitude-only contribution
+    epsilon_initial(j) = 0^2 / 2 - mu / r0;
+    fprintf(' %5.1f  | %10.0f | %15.6f\n', h0, r0, epsilon_initial(j));
 end
 
-%% Step 5: Calculate Equivalent ΔV
+% Energy differences needed to reach target orbit
+Delta_epsilon = epsilon_target_orbit - epsilon_initial;  % [1×4] vector
 
-fprintf('EQUIVALENT ΔV CALCULATION\n');
 
-Delta_V = zeros(n_mach, n_altitudes);
+fprintf('\nEnergy Differences Required (Δε = ε_target - ε_initial):\n');
+fprintf('h₀ [km] | Δε [m²/s²]\n');
+fprintf('---------------------------\n');
+for j = 1:n_altitudes
+    fprintf(' %5.1f  | %12.6f\n', h0_values(j), Delta_epsilon(j));
+end
 
-fprintf('Equivalent ΔV Required:\n');
-fprintf('         | h₀ = 0 km  | h₀ = 7.5 km | h₀ = 15 km  | h₀ = 22.5 km\n');
-fprintf('----------------------------------------------------------------------\n');
+% Convert energy differences to required ΔV
+% Using: ΔV = √(v₀² + 2Δε) - v₀
+% For v₀=0: ΔV = √(2Δε)
+DV_required = sqrt(2 * Delta_epsilon);  % [1×4] vector [m/s]
 
-for i = 1:n_mach
-    M = Mach_values(i);
-    fprintf('M₀ = %d   |', M);
-    
-    for j = 1:n_altitudes
-        v_i = V0_matrix(i,j);  % Initial velocity
-        Delta_eps = Delta_epsilon(i,j);
-        
-        % Calculate required final velocity to achieve target energy
-             % v_f = √(2·ε_target )
-        Delta_V(i,j) = sqrt(2 * Delta_eps);
-        
-              
-        fprintf('  %7.4f  |', Delta_V(i,j));
+fprintf('\nRequired ΔV from each altitude (starting from rest):\n');
+fprintf('h₀ [km] | ΔV_required [m/s]\n');
+fprintf('--------------------------------\n');
+for j = 1:n_altitudes
+    fprintf(' %5.1f  | %15.6f\n', h0_values(j), DV_required(j));
+end
+
+%% Step 5: Calculate Equivalent ΔV (Potential + Kinetic Energy)
+
+% Reference: ΔV required from ground launch
+DV_reference = DV_required(1);  % Ground launch (h=0)
+
+% ΔV-gain from altitude = DV_ground - DV_altitude
+DV_gain_altitude = DV_reference - DV_required;  % [1×4] vector [m/s]
+
+fprintf('ΔV-Gain from Altitude:\n');
+fprintf('h₀ [km] | ΔV_reference [m/s] | ΔV_required [m/s] | ΔV-gain [m/s]\n');
+fprintf('------------------------------------------------------------------------\n');
+for j = 1:n_altitudes
+    fprintf(' %5.1f  | %17.2f | %17.2f | %14.2f\n', ...
+            h0_values(j), DV_reference, DV_required(j), DV_gain_altitude(j));
+end
+
+%% Step 6: ADD VELOCITY CONTRIBUTION SEPARATELY
+
+% The velocity contribution is simply the initial velocity itself
+% DV_gain_velocity = V₀
+DV_gain_velocity = V0_matrix;  % [4×4] matrix [m/s]
+
+%% Step 7: TOTAL ΔV-GAIN (Sum of Both Contributions)
+
+% Total ΔV-gain: altitude contribution + velocity contribution
+% DV_gain_altitude is [1×4], will broadcast across all rows
+% DV_gain_velocity is [4×4]
+Delta_V_gain_total = DV_gain_altitude + DV_gain_velocity;  % [4×4] matrix [m/s]
+
+%% Step 8: FINAL RESULTS TABLE
+
+fprintf('TOTAL ΔV-GAIN\n');
+
+
+fprintf('Altitude [km] | Mach | Velocity [m/s] | Delta V gain [m/s]\n');
+fprintf('---------------------------------------------------------------\n');
+
+for j = 1:n_altitudes
+    for i = 1:n_mach
+        fprintf('    %5.1f     |  %d   |    %10.2f  |    %14.6f\n', ...
+                h0_values(j), Mach_values(i), V0_matrix(i,j), ...
+                Delta_V_gain_total(i,j));
     end
-    fprintf('\n');
 end
