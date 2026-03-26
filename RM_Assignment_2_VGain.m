@@ -81,7 +81,7 @@ for i = 1:n_mach
     
     for j = 1:n_altitudes
         V0_matrix(i,j) = M * a_h0(j);  % V₀ = M₀ × a [m/s]
-        fprintf('  %.4f km/s |', V0_matrix(i,j));
+        fprintf('  %.4f m/s |', V0_matrix(i,j));
     end
     fprintf('\n');
 end
@@ -115,21 +115,22 @@ Delta_epsilon = epsilon_target_orbit - epsilon_initial;  % [1×4] vector
 % For v₀=0: ΔV = √(2Δε)
 DV_required = sqrt(2 * Delta_epsilon);  % [1×4] vector [m/s]
 
-%% Step 5: Calculate Equivalent ΔV (Potential + Kinetic Energy)
+%%  Calculate Equivalent ΔV (Potential + Kinetic Energy)
 
 % Reference: ΔV required from ground launch
 DV_reference = DV_required(1);  % Ground launch (h=0)
+disp(DV_reference)
 
 % ΔV-gain from altitude = DV_ground - DV_altitude
 DV_gain_altitude = DV_reference - DV_required;  % [1×4] vector [m/s]
 
-%% Step 6: ADD VELOCITY CONTRIBUTION SEPARATELY
+%%  ADD VELOCITY CONTRIBUTION SEPARATELY
 
 % The velocity contribution is simply the initial velocity itself
 % DV_gain_velocity = V₀
 DV_gain_velocity = V0_matrix;  % [4×4] matrix [m/s]
 
-%% Step 7: TOTAL ΔV-GAIN (Sum of Both Contributions)
+%%  TOTAL ΔV-GAIN (Sum of Both Contributions)
 
 % Total ΔV-gain: altitude contribution + velocity contribution
 % DV_gain_altitude is [1×4], will broadcast across all rows
